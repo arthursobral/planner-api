@@ -21,7 +21,7 @@ jobs:
         run: ruff check app tests
 
       - name: Testes de domínio (puros, sem banco)
-        run: pytest tests/test_domain_*.py
+        run: python -m pytest tests/test_domain_*.py
 
       - name: Subir Postgres via docker compose
         run: docker compose up -d db
@@ -39,7 +39,7 @@ jobs:
           DATABASE_URL: postgresql+psycopg://planner:planner@localhost:5432/planner
           JWT_SECRET: ci-secret
           SEED_DEMO_DATA: "false"
-        run: pytest tests/
+        run: python -m pytest tests/
 
       - name: Build da imagem da API
         run: docker compose build api

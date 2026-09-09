@@ -60,11 +60,14 @@ pessoas de verdade. Três regras não são negociáveis:
 ```bash
 pip install -r requirements-dev.txt
 
+# "python -m pytest", não só "pytest": é o que garante a raiz do projeto no
+# sys.path, para o "import app" funcionar sem instalar o pacote.
+
 # puros, sem banco:
-pytest tests/test_domain_*.py
+python -m pytest tests/test_domain_*.py
 
 # integração, precisa de Postgres rodando (docker compose up -d db):
-pytest tests/
+python -m pytest tests/
 ```
 
 ## O que foi deixado de fora de propósito (Fase 1)
