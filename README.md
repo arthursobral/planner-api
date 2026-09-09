@@ -17,6 +17,22 @@ FastAPI, SQLAlchemy 2.0, PostgreSQL, JWT (usuário único), Docker Compose, pyte
 Fase 1 é só API — sem frontend (isso entra na Fase 2, no Projeto Produto). A
 interface para explorar/usar é o Swagger em `/docs`.
 
+## Fluxo de trabalho
+
+`master` é protegida: push direto é recusado, toda mudança entra por Pull Request,
+e o PR só pode ser mesclado com o CI verde (`test` no GitHub Actions). Não precisa
+de aprovação de outra pessoa — é um projeto solo — mas precisa existir o PR, com o
+diff visível, um por vez.
+
+```bash
+git checkout -b fase-x-o-que-mudou
+# ... commits ...
+git push -u origin fase-x-o-que-mudou
+gh pr create --fill
+# depois que o CI passar:
+gh pr merge --squash
+```
+
 ## Como rodar
 
 ```bash
