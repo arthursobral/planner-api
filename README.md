@@ -62,9 +62,13 @@ pip install -r requirements-dev.txt
 
 # "python -m pytest", não só "pytest": é o que garante a raiz do projeto no
 # sys.path, para o "import app" funcionar sem instalar o pacote.
+#
+# "-k domain" em vez de "tests/test_domain_*.py": PowerShell não expande "*"
+# para comandos externos como bash faz — o glob chegaria literal no pytest e
+# ele não acharia o arquivo. "-k" filtra pelo nome e funciona igual nos dois.
 
 # puros, sem banco:
-python -m pytest tests/test_domain_*.py
+python -m pytest tests -k domain
 
 # integração, precisa de Postgres rodando (docker compose up -d db):
 python -m pytest tests/
