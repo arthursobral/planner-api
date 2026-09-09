@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I"]
+ignore = [
+    "EXE002", # bit de executável em arquivo .py não tem relação com shebang aqui
+    "B008",   # Depends(...) como default de parâmetro é o padrão do próprio FastAPI
+    "DTZ011", # datas de domínio (admissão, nota) são calendário local de propósito, não instante
+]

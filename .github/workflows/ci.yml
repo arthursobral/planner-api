@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check app tests
+
+      - name: Testes de domínio (puros, sem banco)
+        run: pytest tests/test_domain_*.py
+
+      - name: Subir Postgres via docker compose
+        run: docker compose up -d db
+
+      - name: Esperar Postgres ficar pronto
+        run: |
+          for i in $(seq 1 20); do
+            docker compose exec -T db pg_isready -U planner && exit 0
+            sleep 2
+          done
+          echo "Postgres não ficou pronto a tempo" && exit 1
+
+      - name: Testes de integração (API + banco real)
+        env:
+          DATABASE_URL: postgresql+psycopg://planner:planner@localhost:5432/planner
+          JWT_SECRET: ci-secret
+          SEED_DEMO_DATA: "false"
+        run: pytest tests/
+
+      - name: Build da imagem da API
+        run: docker compose build api
