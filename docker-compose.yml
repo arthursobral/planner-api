@@ -18,7 +18,11 @@ services:
   api:
     build: .
     env_file:
-      - .env
+      # required: false — sem isso, "docker compose" recusa QUALQUER comando
+      # (até "up -d db" ou "build") quando .env não existe, mesmo não tocando
+      # no serviço api. É o caso do CI, que nunca cria um .env real.
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql+psycopg://planner:planner@db:5432/planner
     ports:
