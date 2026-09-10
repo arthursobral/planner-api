@@ -1,23 +1,24 @@
 # planner-api
 
-Projeto Pessoal do roteiro de portfólio de engenharia de IA — Fases 1 e 2. Uma API
+Projeto Pessoal do roteiro de portfólio de engenharia de IA — Fases 1 a 3. Uma API
 para o problema real de um team lead: tickets de trabalho, lista de tarefas,
 acompanhamento de itens com direct reports, notas de reunião, a montagem automática
-da pauta de 1:1 e, desde a Fase 2, busca semântica (RAG) sobre os próprios registros.
+da pauta de 1:1 e, desde a Fase 2, um agente com busca semântica e ferramentas sobre
+os próprios registros.
 
 Inspirado no [Planner v2](../Planner-v2) (React/Dexie, uso diário real há 14 meses) —
 mesmo domínio e mesmas regras de negócio já validadas, reescritas do zero em
 FastAPI + SQLAlchemy + PostgreSQL. O Planner v2 não foi tocado; continua sendo a
 ferramenta do dia a dia.
 
-**Nota sobre o roteiro:** a Fase 2 original pede um "Projeto Produto" novo e público
-(RAG sobre uma base de conhecimento aberta), porque esse produto precisa ficar no ar
-publicamente nas Fases 4-6. Aqui a Fase 2 foi aplicada **dentro do planner-api** —
-mesmas peças técnicas (embeddings, chunking, vector DB, retrieval, geração com
-citação), mas sobre dado pessoal, então **este repositório nunca vai ao ar
-publicamente com dado real**. Quando chegar a hora do "produto público com link ao
-vivo", a mesma engine de RAG será reaproveitada contra uma base pública separada —
-isso ainda não foi feito.
+**Nota sobre o roteiro:** as Fases 2 e 3 originais pedem um "Projeto Produto" novo e
+público (RAG e depois agente sobre uma base de conhecimento aberta), porque esse
+produto precisa ficar no ar publicamente nas Fases 4-6. Aqui as duas foram aplicadas
+**dentro do planner-api** — mesmas peças técnicas (embeddings, vector DB, retrieval,
+function calling, tratamento de erro e limite de iterações), mas sobre dado pessoal,
+então **este repositório nunca vai ao ar publicamente com dado real**. Quando chegar
+a hora do "produto público com link ao vivo", a mesma engine será reaproveitada
+contra uma base pública separada — isso ainda não foi feito.
 
 ## Stack
 
@@ -63,11 +64,12 @@ Num banco vazio e com `SEED_DEMO_DATA=true` (padrão), a API cadastra sozinha um
 punhado de pessoas/tickets/tarefas **fictícios** (gerados com Faker) só para ter algo
 para explorar. Ligue `SEED_DEMO_DATA=false` para começar realmente vazio.
 
-## RAG: busca semântica sobre os próprios dados
+## RAG + agente: perguntas sobre os próprios dados
 
-Responde perguntas como "o que eu fiz para o cliente Atlas em março" buscando nos
-seus próprios tickets, anotações de diário, calls, acompanhamentos e pontos de
-avaliação — não inventa, cita a fonte, e roda 100% local (custo: **US$ 0** por
+Responde perguntas como "o que eu fiz para o cliente Atlas em março" (busca
+semântica) ou "quantos tickets estão parados" (métrica agregada) ou "quantos dias
+úteis faltam até dia 30" (cálculo de calendário) — o agente decide sozinho qual
+ferramenta usar, em loop, antes de responder. Roda 100% local (custo: **US$ 0** por
 pergunta).
 
 ```bash
@@ -76,12 +78,49 @@ docker compose exec ollama ollama pull llama3.2:3b
 ```
 
 No Swagger, autentique e chame `POST /rag/reindexar` sempre que quiser atualizar o
-índice com o que mudou (não é automático de propósito — ver `app/rag/indexar.py`),
-depois `POST /rag/perguntar` com `{"pergunta": "..."}`. A resposta vem com `fontes`:
-a lista de registros (entidade + id) que embasaram a resposta.
+índice de busca com o que mudou (não é automático de propósito — ver
+`app/rag/indexar.py`), depois `POST /rag/perguntar` com `{"pergunta": "..."}`. A
+resposta vem com `fontes` (os registros que embasaram uma busca, quando houve) e
+`ferramentas_usadas` (quais ferramentas o agente decidiu chamar, na ordem).
 
-Para conferir a qualidade das respostas contra um conjunto fixo de perguntas (usa o
-seed de demonstração):
+### As 4 ferramentas (`app/rag/ferramentas.py`)
+
+| Ferramenta | Para quê |
+|---|---|
+| `buscar_nos_registros` | Busca semântica no texto — a peça da Fase 2 |
+| `consultar_metricas` | Contagens agregadas (tickets parados/em atenção, pontos negativos abertos, acompanhamentos pausados) |
+| `calcular` | Aritmética simples — avaliada via AST, nunca `eval()` |
+| `dias_uteis_ate` | Dias úteis até uma data, com feriados nacionais |
+
+**Por que não uma "API pública" de verdade como o roteiro sugere:** isso seria uma
+chamada de rede saindo da máquina, contrariando a regra mais importante do projeto
+desde a Fase 1. `dias_uteis_ate` cobre o mesmo papel ("o agente decide usar algo
+fora do vector DB") com a biblioteca `holidays` — feriados embutidos localmente,
+sem rede nenhuma.
+
+O loop (`app/rag/agente.py:executar_loop`) tem limite de 5 passos (evita rodar pra
+sempre) e trata erro de ferramenta como resultado, não como exceção — o modelo vê
+que falhou e decide o que fazer. `docker compose logs api` mostra cada decisão:
+
+```
+[agente] chamando ferramenta: consultar_metricas({'metrica': 'tickets_parados'})
+[agente] chamando ferramenta: dias_uteis_ate({'data': '2026-09-30'})
+[agente] chamando ferramenta: buscar_nos_registros({'consulta': 'fornecedor de logs escolhido no onboarding'})
+[agente] chamando ferramenta: calcular({'expressao': '(120 + 30) / 3'})
+```
+
+**4 casos de teste reais** (`llama3.2:3b`, seed de demonstração), um por ferramenta —
+critério de conclusão da Fase 3:
+
+| Pergunta | Ferramenta | Resposta |
+|---|---|---|
+| Quantos tickets estão parados? | `consultar_metricas` | "0 ticket(s) parado(s)." |
+| Quantos dias úteis faltam até 2026-09-30? | `dias_uteis_ate` | "Até 2026-09-30, faltam 14 dias úteis." |
+| Qual fornecedor de logs foi escolhido no onboarding? | `buscar_nos_registros` | "O fornecedor de logs escolhido no onboarding foi o Datadog." |
+| Quanto é (120 + 30) dividido por 3? | `calcular` | "A resposta é 50,0." |
+
+Para conferir a qualidade num conjunto maior e fixo de perguntas (usa o seed de
+demonstração; a mesma suíte da Fase 2, agora passando pelo agente):
 
 ```bash
 python scripts/avaliar_rag.py --usuario arthur --senha sua-senha
@@ -91,19 +130,14 @@ Esse script não roda no CI — depende do modelo do Ollama já baixado (pesado 
 para rodar a cada push). É verificação manual, mesmo tratamento que os testes E2E
 do Planner v2 original.
 
-**Resultado medido** (seed de demonstração, `llama3.2:3b`, `temperature=0` para
-reprodutibilidade): **8/12 (67%)**. Custo: **US$ 0** — geração e embeddings 100%
-locais.
-
-As 4 perguntas que falham têm um padrão claro, visto inspecionando `fontes` de cada
-resposta: **a busca (retrieval) sempre encontra o trecho certo** — ele aparece na
-lista de fontes retornada — mas o modelo de 3B parâmetros às vezes não consegue
-extrair a resposta de um trecho que está mais abaixo na lista de contexto, e
-responde "não encontrou essa informação" mesmo com o fato presente. Ou seja: a parte
-de engenharia (embeddings + pgvector + retrieval) funciona; o teto de qualidade
-aqui é do modelo local pequeno, não do pipeline. Um modelo maior (ou uma API paga
-como Claude Haiku) resolveria essas 4 perguntas — foi mantido local de propósito
-por custo, não por falta de alternativa melhor.
+**Resultado medido:** **8/12 (67%)** — igual ao da Fase 2, confirmando que passar
+pelo agente não piora a busca por texto. Inspecionando `fontes` de cada resposta:
+**a busca sempre encontra o trecho certo**; as falhas são o modelo local de 3B
+parâmetros não sintetizando bem uma resposta longa a partir do contexto (em duas
+delas ele responde errado com confiança em vez de dizer "não sei" — vale saber
+disso antes de confiar cegamente na resposta). Um modelo maior (ou uma API paga
+como Claude Haiku) teria menos disso — mantido local de propósito, por custo, não
+por falta de alternativa melhor.
 
 ## Privacidade — leia antes de usar com dado real
 
@@ -162,5 +196,13 @@ python -m pytest tests/
   dataset pessoal pequeno.
 - **Índice ANN (ivfflat/hnsw) no pgvector.** Sequential scan resolve bem para
   algumas centenas de linhas; relevante na casa dos milhares.
-- **Fase 3 (agente com ferramentas)** e o **"produto público"** das Fases 4-6
-  ficam para depois — este PR é só a Fase 2.
+
+**Fase 3:**
+- **Bot em Discord/Telegram/Slack.** Explicitamente opcional no roteiro; sem uso
+  real aqui — um team lead não vai perguntar métrica de time num chat de time.
+- **Ferramenta de rede externa de verdade.** Ver a explicação de `dias_uteis_ate`
+  acima — contrariaria a regra mais importante do projeto.
+- **`consultar_metricas` com SQL livre.** Enum fechado de 4 métricas cobre o caso
+  real; gerar SQL a partir de linguagem natural é superfície de ataque sem
+  necessidade correspondente aqui.
+- **O "produto público"** das Fases 4-6 continua para depois.
