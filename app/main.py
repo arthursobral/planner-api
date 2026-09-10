@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.config import settings
-from app.db import Base, SessionLocal, engine
+from app.db import Base, SessionLocal, engine, garantir_extensao_vector
 from app.routers import (
     acompanhamentos,
     anotacoes,
@@ -13,6 +13,7 @@ from app.routers import (
     pauta,
     pessoas,
     pontos,
+    rag,
     reunioes,
     todos,
 )
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     # ponytail: create_all em vez de Alembic — schema simples, sem dado em
     # produção ainda. Trocar por migrações no dia em que evoluir o schema sem
     # poder recriar o banco do zero.
+    garantir_extensao_vector()
     Base.metadata.create_all(bind=engine)
     if settings.seed_demo_data:
         db = SessionLocal()
@@ -43,5 +45,5 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-for router in (auth, pessoas, atividades, todos, acompanhamentos, anotacoes, pontos, reunioes, eventos, pauta):
+for router in (auth, pessoas, atividades, todos, acompanhamentos, anotacoes, pontos, reunioes, eventos, pauta, rag):
     app.include_router(router.router)
