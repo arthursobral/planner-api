@@ -223,6 +223,7 @@ class FonteRag(BaseModel):
 class RespostaRag(BaseModel):
     resposta: str
     fontes: list[FonteRag]
+    ferramentas_usadas: list[str]
 
 
 class ReindexarFora(BaseModel):
