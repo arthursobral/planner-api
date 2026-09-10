@@ -1,21 +1,31 @@
 # planner-api
 
-Projeto Pessoal da Fase 1 do roteiro de portfólio de engenharia de IA. Uma API para
-o problema real de um team lead: tickets de trabalho, lista de tarefas, acompanhamento
-de itens com direct reports, notas de reunião e a montagem automática da pauta de 1:1
-(o que mudou desde a última conversa registrada com cada pessoa).
+Projeto Pessoal do roteiro de portfólio de engenharia de IA — Fases 1 e 2. Uma API
+para o problema real de um team lead: tickets de trabalho, lista de tarefas,
+acompanhamento de itens com direct reports, notas de reunião, a montagem automática
+da pauta de 1:1 e, desde a Fase 2, busca semântica (RAG) sobre os próprios registros.
 
 Inspirado no [Planner v2](../Planner-v2) (React/Dexie, uso diário real há 14 meses) —
 mesmo domínio e mesmas regras de negócio já validadas, reescritas do zero em
-FastAPI + SQLAlchemy + PostgreSQL para a Fase 1 do roteiro. O Planner v2 não foi
-tocado; continua sendo a ferramenta do dia a dia.
+FastAPI + SQLAlchemy + PostgreSQL. O Planner v2 não foi tocado; continua sendo a
+ferramenta do dia a dia.
+
+**Nota sobre o roteiro:** a Fase 2 original pede um "Projeto Produto" novo e público
+(RAG sobre uma base de conhecimento aberta), porque esse produto precisa ficar no ar
+publicamente nas Fases 4-6. Aqui a Fase 2 foi aplicada **dentro do planner-api** —
+mesmas peças técnicas (embeddings, chunking, vector DB, retrieval, geração com
+citação), mas sobre dado pessoal, então **este repositório nunca vai ao ar
+publicamente com dado real**. Quando chegar a hora do "produto público com link ao
+vivo", a mesma engine de RAG será reaproveitada contra uma base pública separada —
+isso ainda não foi feito.
 
 ## Stack
 
-FastAPI, SQLAlchemy 2.0, PostgreSQL, JWT (usuário único), Docker Compose, pytest.
+FastAPI, SQLAlchemy 2.0, PostgreSQL + pgvector, JWT (usuário único), Ollama (LLM
+local), fastembed (embeddings locais), Docker Compose, pytest.
 
-Fase 1 é só API — sem frontend (isso entra na Fase 2, no Projeto Produto). A
-interface para explorar/usar é o Swagger em `/docs`.
+Segue sem frontend — a interface para explorar/usar é o Swagger em `/docs`. Um
+frontend é coisa para mais adiante, sem data definida.
 
 ## Fluxo de trabalho
 
@@ -52,6 +62,48 @@ endpoints.
 Num banco vazio e com `SEED_DEMO_DATA=true` (padrão), a API cadastra sozinha um
 punhado de pessoas/tickets/tarefas **fictícios** (gerados com Faker) só para ter algo
 para explorar. Ligue `SEED_DEMO_DATA=false` para começar realmente vazio.
+
+## RAG: busca semântica sobre os próprios dados
+
+Responde perguntas como "o que eu fiz para o cliente Atlas em março" buscando nos
+seus próprios tickets, anotações de diário, calls, acompanhamentos e pontos de
+avaliação — não inventa, cita a fonte, e roda 100% local (custo: **US$ 0** por
+pergunta).
+
+```bash
+# uma vez, depois do `docker compose up`: baixa o modelo (~2GB)
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+No Swagger, autentique e chame `POST /rag/reindexar` sempre que quiser atualizar o
+índice com o que mudou (não é automático de propósito — ver `app/rag/indexar.py`),
+depois `POST /rag/perguntar` com `{"pergunta": "..."}`. A resposta vem com `fontes`:
+a lista de registros (entidade + id) que embasaram a resposta.
+
+Para conferir a qualidade das respostas contra um conjunto fixo de perguntas (usa o
+seed de demonstração):
+
+```bash
+python scripts/avaliar_rag.py --usuario arthur --senha sua-senha
+```
+
+Esse script não roda no CI — depende do modelo do Ollama já baixado (pesado demais
+para rodar a cada push). É verificação manual, mesmo tratamento que os testes E2E
+do Planner v2 original.
+
+**Resultado medido** (seed de demonstração, `llama3.2:3b`, `temperature=0` para
+reprodutibilidade): **8/12 (67%)**. Custo: **US$ 0** — geração e embeddings 100%
+locais.
+
+As 4 perguntas que falham têm um padrão claro, visto inspecionando `fontes` de cada
+resposta: **a busca (retrieval) sempre encontra o trecho certo** — ele aparece na
+lista de fontes retornada — mas o modelo de 3B parâmetros às vezes não consegue
+extrair a resposta de um trecho que está mais abaixo na lista de contexto, e
+responde "não encontrou essa informação" mesmo com o fato presente. Ou seja: a parte
+de engenharia (embeddings + pgvector + retrieval) funciona; o teto de qualidade
+aqui é do modelo local pequeno, não do pipeline. Um modelo maior (ou uma API paga
+como Claude Haiku) resolveria essas 4 perguntas — foi mantido local de propósito
+por custo, não por falta de alternativa melhor.
 
 ## Privacidade — leia antes de usar com dado real
 
@@ -90,8 +142,9 @@ python -m pytest tests -k domain
 python -m pytest tests/
 ```
 
-## O que foi deixado de fora de propósito (Fase 1)
+## O que foi deixado de fora de propósito
 
+**Fase 1:**
 - **Alembic/migrações.** Schema ainda simples e sem dado em produção — o app cria
   as tabelas sozinho no startup (`Base.metadata.create_all`). Trocar por migrações
   no dia em que o schema precisar evoluir sem poder recriar o banco do zero.
@@ -101,4 +154,13 @@ python -m pytest tests/
 - **Conteúdo institucional de progressão** (textos de expectativa por marco de
   tempo de casa). É propriedade do empregador de quem usa isto, não deste projeto
   — ver `criterios.local.json` acima.
-- **Frontend e multiusuário/roles.** Fora do escopo desta fase do roteiro.
+- **Frontend e multiusuário/roles.** Fora do escopo do roteiro até aqui.
+
+**Fase 2:**
+- **Reindexação automática por evento.** `POST /rag/reindexar` é manual. Reindexar
+  a cada escrita é a automação da Fase 5 (pipeline contínuo) — prematuro com um
+  dataset pessoal pequeno.
+- **Índice ANN (ivfflat/hnsw) no pgvector.** Sequential scan resolve bem para
+  algumas centenas de linhas; relevante na casa dos milhares.
+- **Fase 3 (agente com ferramentas)** e o **"produto público"** das Fases 4-6
+  ficam para depois — este PR é só a Fase 2.
