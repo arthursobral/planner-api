@@ -9,9 +9,9 @@ sem noção de ferramenta.
 
 from __future__ import annotations
 
-from app.config import settings
-
 import httpx
+
+from app.config import settings
 
 
 def chat(mensagens: list[dict], ferramentas: list[dict] | None = None) -> dict:
