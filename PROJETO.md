@@ -4,6 +4,12 @@ Histórico e decisões do projeto. Para "como rodar no dia a dia", ver `README.m
 Para "o que falta e como retomar em outra sessão", ver `RETOMAR.md` — este arquivo
 é só o passado, não o futuro.
 
+**Nota (2026-09-11):** as Fases 2 e 3 (seções 6 e 7 abaixo) foram implementadas,
+usadas e depois **removidas** deste repositório. Ficam registradas aqui como
+histórico real do que foi feito — o código em si não existe mais na `master`
+(ver git log dos PRs #2/#3 para recuperá-lo). Motivo e o que vem no lugar: ver
+`RETOMAR.md`.
+
 ## 1. De onde veio
 
 Arthur é Team Lead há 3,5 anos na Wall Street Docs e está seguindo um roteiro de

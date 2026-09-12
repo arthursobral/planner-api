@@ -6,10 +6,8 @@ Se o Arthur quiser cadastrar o time real para uso pessoal, é pelas rotas da API
 (`POST /pessoas` etc.) — esse dado fica só no volume Postgres local, nunca aqui.
 
 O conteúdo dos tickets/anotações/calls abaixo é escrito à mão (não gerado por
-Faker) — de propósito: são os fatos que `scripts/avaliar_rag.py` usa para
-checar se a busca semântica encontra a coisa certa. Texto do Faker (lorem
-ipsum-like) não serviria: não dá pra escrever uma pergunta com resposta certa
-sobre frase aleatória.
+Faker) para servir de exemplo legível ao explorar a API — texto do Faker (lorem
+ipsum-like) não teria esse valor.
 """
 
 from __future__ import annotations
