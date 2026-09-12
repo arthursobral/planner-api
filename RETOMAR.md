@@ -23,15 +23,53 @@ aparecia no texto do commit. Decisão: só parar de adicionar dali pra frente,
 sem reescrever o histórico já público (a `master` protegida recusaria o
 force-push mesmo que quiséssemos).
 
-**Estado agora (2026-09-12), no meio do trabalho do frontend — ver seção
-completa mais abaixo:**
-- PR #6 (`frontend/00-setup`) aberto, CI verde, **aguardando sua revisão/merge**
-  — https://github.com/arthursobral/planner-api/pull/6
-- Canvas de design aprovado (com o ajuste do ícone panda já aplicado):
-  https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
-- Próximo passo, só depois do merge do PR #6: disparar os 7 agents em paralelo
-  (um por tela), cada um em branch própria. Ver "Plano dos 7 agents" abaixo —
-  já está todo desenhado, é só executar.
+**Estado agora (2026-09-12, fim da sessão — Arthur foi dormir, revisar amanhã):**
+- PR #6 (scaffold) e o PR de atualização deste arquivo **já mesclados** na
+  master (a pedido do Arthur — baixo risco, só infraestrutura/documentação).
+- Canvas de design aprovado: https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
+- **Os 7 agents em paralelo terminaram, cada um com PR aberto, sem merge** —
+  é isso que precisa ser revisado amanhã, um por um:
+  - #7 `frontend/01-login` — Login
+  - #9 `frontend/02-tickets` — Tickets (Atividades)
+  - #11 `frontend/03-tarefas` — Tarefas (Todos)
+  - #13 `frontend/04-equipe` — Equipe (pontos + diário) — depende de #10 para a
+    experiência completa do botão "Preparar 1:1" (a sub-tela de Pauta fica como
+    stub até #10 ser mesclado também, mas não há conflito de arquivo entre eles)
+  - #10 `frontend/05-pauta` — sub-tela de Pauta do 1:1
+  - #12 `frontend/06-acompanhamentos` — Acompanhamentos
+  - #14 `frontend/07-calls` — Calls (notas de reunião)
+
+  Todos os 7 rodaram `tsc -b`, `oxlint`, `npm run build` e `npm test` na própria
+  worktree antes de abrir o PR — conferir o CI do GitHub em cada um mesmo assim
+  antes de mesclar (`gh pr checks <n>`).
+
+**Ajuste pequeno pendente, achado por 4 dos 7 agents de forma independente:**
+`frontend/vite.config.ts` não tem `globals: true` no bloco `test`, então o
+auto-cleanup do Testing Library entre testes não é registrado sozinho. Cada
+agent contornou isso com `afterEach(cleanup)` local no próprio arquivo de
+teste (correto, evitou mexer em config compartilhada e conflitar entre as 7
+branches) — mas depois que todos os PRs forem mesclados, vale adicionar
+`globals: true` (ou um `afterEach(cleanup)` central em `setupTests.ts`) e
+remover os `afterEach` repetidos dos arquivos de teste, se quiser limpar a
+duplicação.
+
+**Outra sessão do Claude Code apareceu no meio do trabalho:** uma sessão
+chamada "planner-api-db" mandou mensagem perguntando se esse mesmo plano de 7
+telas já estava rodando aqui, porque as isolações por git worktree dela
+tinham falhado. Respondi com o status exato (visto acima) e pedi pra não
+duplicar. Se amanhã aparecer alguma branch/PR extra e inesperada relacionada
+a essas mesmas 7 telas, pode ter vindo de lá — conferir antes de presumir que
+foi esta sessão.
+
+**Ao retomar amanhã, primeiro passo:** rodar `gh pr list` para ver os 7 PRs,
+conferir CI de cada um (`gh pr checks <n>`), revisar o diff e mesclar um por
+um (squash, mesma convenção de sempre). Como `frontend/04-equipe` e
+`frontend/05-pauta` se completam mutuamente mas não têm conflito de arquivo
+(cada um só tocou no próprio arquivo de tela), a ordem de merge entre eles não
+importa tecnicamente — só depois que os dois estiverem mesclados é que o botão
+"Preparar 1:1" mostra a pauta de verdade em vez do stub. Se algum agent não
+terminou ou não abriu PR, rode `gh pr list` e `git branch -r` para ver o que
+realmente existe antes de presumir.
 
 ---
 
@@ -128,16 +166,16 @@ CI verde). Contém:
   (Vitest), build. Ainda não é um check obrigatório na ruleset da `master`
   (só `test` é) — considerar adicionar se quiser travar merge nele também.
 
-**Antes de mexer em mais código:** revisar o PR #6. Se pedir mudança, ela deve
-entrar nessa mesma branch antes do merge — os 7 agents do próximo passo vão
-todos partir do estado pós-merge dela.
+PR #6 já foi mesclado (ver estado no topo deste arquivo).
 
-### Plano dos 7 agents em paralelo — pronto pra disparar depois do merge do PR #6
+### Plano dos 7 agents em paralelo — já executado, PRs aguardando revisão
 
 Pedido do Arthur: 7 agents, um por tela, cada um numa branch própria nomeada
 pelo que fez, todos rodando ao mesmo tempo, cada um commitando (sem
 `Co-Authored-By`, ver regra permanente no topo deste arquivo), PR aberto no
 final — **sem merge automático**, o Arthur revisa e mescla cada PR manualmente.
+Isso foi disparado no fim desta sessão (2026-09-12) — os 7 PRs devem estar
+prontos para revisão amanhã (ver lista de branches no topo deste arquivo).
 
 Como isso fica tecnicamente possível sem os 7 pisarem uns nos outros: cada
 agent roda com `isolation: "worktree"` (cria um worktree git isolado, branch
