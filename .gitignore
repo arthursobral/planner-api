@@ -4,6 +4,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
-
+.claude
 # Conteúdo institucional do empregador (critérios de progressão) — nunca versionar.
 criterios.local.json
