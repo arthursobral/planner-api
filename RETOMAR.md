@@ -53,13 +53,21 @@ branches) — mas depois que todos os PRs forem mesclados, vale adicionar
 remover os `afterEach` repetidos dos arquivos de teste, se quiser limpar a
 duplicação.
 
-**Outra sessão do Claude Code apareceu no meio do trabalho:** uma sessão
-chamada "planner-api-db" mandou mensagem perguntando se esse mesmo plano de 7
-telas já estava rodando aqui, porque as isolações por git worktree dela
-tinham falhado. Respondi com o status exato (visto acima) e pedi pra não
-duplicar. Se amanhã aparecer alguma branch/PR extra e inesperada relacionada
-a essas mesmas 7 telas, pode ter vindo de lá — conferir antes de presumir que
-foi esta sessão.
+**Outra sessão do Claude Code apareceu no meio do trabalho e ajudou:** uma
+sessão chamada "planner-api-db" mandou mensagem perguntando se esse mesmo
+plano de 7 telas já estava rodando aqui, porque as isolações por git worktree
+dela tinham falhado (nada duplicado — as 7 tentativas dela falharam antes de
+fazer qualquer coisa). Coordenamos por mensagem: ela ficou de fora das 7
+telas, mas encontrou e corrigiu um bug real de CI **numa branch própria,
+isolada, mesclada direto por ser baixo risco** — PR #16
+(`fix/app-test-mock-fetch`): `App.test.tsx` do scaffold não mockava `fetch`,
+e como o teste do "shell autenticado" agora monta uma tela real (Tickets, a
+primeira a terminar), isso disparava uma chamada de rede de verdade em CI
+(`ECONNREFUSED`) — corrigido com um stub padrão de `fetch` em
+`setupTests.ts`. Ela não tocou em nenhum dos 7 PRs de tela nem no checkout
+compartilhado deste diretório, só num worktree isolado próprio. Vale conferir
+se esse fix já está refletido nas 7 branches (um merge/rebase da master
+resolve) antes de revisar os PRs amanhã.
 
 **Ao retomar amanhã, primeiro passo:** rodar `gh pr list` para ver os 7 PRs,
 conferir CI de cada um (`gh pr checks <n>`), revisar o diff e mesclar um por
