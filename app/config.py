@@ -18,9 +18,5 @@ class Settings(BaseSettings):
     # vazio. Nunca usar dado real aqui — ver README, seção Privacidade.
     seed_demo_data: bool = True
 
-    # RAG: geração 100% local via Ollama — nenhuma chamada de rede externa.
-    ollama_url: str = "http://ollama:11434"
-    ollama_model: str = "llama3.2:3b"
-
 
 settings = Settings()

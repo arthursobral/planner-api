@@ -207,29 +207,6 @@ class EventoFora(BaseModel):
     origem: str
 
 
-# --- RAG ---------------------------------------------------------------
-
-
-class PerguntaRag(BaseModel):
-    pergunta: str
-
-
-class FonteRag(BaseModel):
-    entidade: str
-    entidade_id: int
-    texto: str
-
-
-class RespostaRag(BaseModel):
-    resposta: str
-    fontes: list[FonteRag]
-    ferramentas_usadas: list[str]
-
-
-class ReindexarFora(BaseModel):
-    fragmentos: int
-
-
 # --- Pauta de 1:1 ---------------------------------------------------------------
 
 

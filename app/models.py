@@ -13,13 +13,10 @@ from __future__ import annotations
 
 import datetime as dt
 
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import Date, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-
-DIMENSAO_EMBEDDING = 384
 
 
 def _agora() -> dt.datetime:
@@ -147,20 +144,3 @@ class Evento(Base):
     para: Mapped[str | None] = mapped_column(Text, default=None)
     em: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_agora)
     origem: Mapped[str] = mapped_column(default="app")
-
-
-class Fragmento(Base):
-    """Um pedaço de texto indexado para busca semântica (RAG), com seu embedding.
-    `entidade`/`entidade_id` apontam de volta para o registro de origem (Atividade,
-    Anotacao, Reuniao, Acompanhamento ou PontoAvaliacao) — é como a resposta cita a
-    fonte. Reindexação é full-rebuild (ver app/rag/indexar.py): o volume de dado de
-    uma pessoa é pequeno, não vale a complexidade de atualização incremental."""
-
-    __tablename__ = "fragmentos"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    entidade: Mapped[str]
-    entidade_id: Mapped[int]
-    texto: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float]] = mapped_column(Vector(DIMENSAO_EMBEDDING))
-    criado_em: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_agora)

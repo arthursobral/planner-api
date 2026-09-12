@@ -25,7 +25,7 @@ os.environ["ADMIN_PASSWORD_HASH"] = bcrypt.hashpw(SENHA_TESTE.encode("utf-8"), b
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.db import Base, get_db  # noqa: E402
@@ -35,10 +35,6 @@ from app.main import app  # noqa: E402
 @pytest.fixture()
 def db_session():
     engine = create_engine(os.environ["DATABASE_URL"])
-    # Não depende de nenhum outro teste/fixture já ter ativado a extensão —
-    # este arquivo pode rodar sozinho (ex.: `pytest -k rag`).
-    with engine.begin() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
     session = sessionmaker(bind=engine)()
     try:

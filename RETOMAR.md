@@ -15,6 +15,32 @@ O repositório está em https://github.com/arthursobral/planner-api (público,
 
 ---
 
+## Decisão (2026-09-11): RAG/agente saem do planner-api
+
+O RAG (Fase 2) e o agente com ferramentas (Fase 3) foram removidos deste
+repositório. Motivo: manter o `planner-api` como o "Projeto Pessoal" puro (API de
+planner — Fase 1 do roteiro), e mover o aprendizado de RAG/agentes para um
+**projeto novo e separado**, sobre uma base de conhecimento diferente (candidato a
+virar o "Projeto Produto" público das Fases 4-6, já que aquele nunca pode ser
+este repositório com dado nominal real).
+
+**Não fazer de novo:** o código removido (embeddings via `fastembed`, Postgres
++ `pgvector`, geração via Ollama local, agente com function calling, chunking,
+avaliação por suíte de perguntas) já existiu e funcionou aqui — está no histórico
+do git (PRs #2 e #3, branch/commits antes desta remoção). Ao começar o projeto
+novo, vale revisar esse código como ponto de partida em vez de reprojetar do zero.
+
+**Decisões em aberto para o projeto novo** (perguntar quando chegar a hora, não
+presumir):
+- Nome/local do repositório.
+- Qual base de conhecimento pública vai alimentar o RAG (a régua do roteiro pede
+  algo que "estranhos" possam consultar de verdade).
+- Se mantém a regra de custo zero (embeddings/LLM locais) ou se, sendo um projeto
+  público sem dado sensível, faz sentido usar uma API paga (ex.: Claude) para uma
+  resposta melhor que os 67% medidos aqui com `llama3.2:3b`.
+
+---
+
 ## Passo imediato: o frontend
 
 Fases 1-3 são só API (Swagger como interface). Próximo passo natural: uma UI de
@@ -157,9 +183,7 @@ nada disso agora, só ter o contexto pronto):
 Tudo detalhado no `README.md`. Os mais usados:
 
 ```bash
-docker compose up                          # sobe api + db + ollama
-docker compose exec ollama ollama pull llama3.2:3b   # uma vez
+docker compose up                          # sobe api + db
 python -m pytest tests -k domain           # testes puros, sem banco
 python -m pytest tests/                    # suíte completa, precisa de `docker compose up -d db`
-python scripts/avaliar_rag.py --usuario arthur --senha sua-senha   # avaliação manual do agente
 ```
