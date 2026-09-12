@@ -18,5 +18,9 @@ class Settings(BaseSettings):
     # vazio. Nunca usar dado real aqui — ver README, seção Privacidade.
     seed_demo_data: bool = True
 
+    # Origem do frontend em dev (Vite). Uso pessoal, um usuário só — não vale a
+    # complexidade de uma lista configurável por ambiente.
+    frontend_origin: str = "http://localhost:5173"
+
 
 settings = Settings()

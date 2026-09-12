@@ -13,6 +13,26 @@ aqui o que já está lá.
 O repositório está em https://github.com/arthursobral/planner-api (público,
 `master` protegida — todo trabalho novo é branch + PR, ver `README.md`).
 
+**Regra permanente deste projeto (2026-09-12): nunca adicionar atribuição do
+Claude/Anthropic em commits ou PRs aqui** (nem `Co-Authored-By`, nem
+"Generated with"). O Arthur pediu explicitamente depois de notar a linha num PR
+já mesclado — checamos via `gh api repos/arthursobral/planner-api/contributors`
+e o Claude não aparece como contribuidor de verdade (o e-mail
+`noreply@anthropic.com` não linka com conta nenhuma), mas a linha ainda
+aparecia no texto do commit. Decisão: só parar de adicionar dali pra frente,
+sem reescrever o histórico já público (a `master` protegida recusaria o
+force-push mesmo que quiséssemos).
+
+**Estado agora (2026-09-12), no meio do trabalho do frontend — ver seção
+completa mais abaixo:**
+- PR #6 (`frontend/00-setup`) aberto, CI verde, **aguardando sua revisão/merge**
+  — https://github.com/arthursobral/planner-api/pull/6
+- Canvas de design aprovado (com o ajuste do ícone panda já aplicado):
+  https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
+- Próximo passo, só depois do merge do PR #6: disparar os 7 agents em paralelo
+  (um por tela), cada um em branch própria. Ver "Plano dos 7 agents" abaixo —
+  já está todo desenhado, é só executar.
+
 ---
 
 ## Decisão (2026-09-11): RAG/agente saem do planner-api
@@ -41,51 +61,123 @@ presumir):
 
 ---
 
-## Passo imediato: o frontend
+## O frontend — estado detalhado e próximos passos
 
-Fases 1-3 são só API (Swagger como interface). Próximo passo natural: uma UI de
-verdade para o agente/RAG/tickets — mencionado como "eventualmente" desde a Fase 2,
-chegou a hora.
+Decisões já tomadas nesta sessão (não perguntar de novo):
 
-**Antes de codar, isto deve passar pelo mesmo processo das fases anteriores:**
-Plan Mode, plano escrito, confirmação do Arthur antes de implementar. Não começar
-direto.
+1. **Onde mora:** monorepo, pasta `frontend/` dentro do próprio `planner-api`.
+2. **Stack:** React + Vite + TypeScript + Tailwind v4 — mesma combinação do
+   Planner v2, tokens portados quase sem tradução.
+3. **Escopo da v1:** Login, Tickets (Atividades), Tarefas (Todos), Equipe
+   (pontos de avaliação + diário) com a Pauta de 1:1 como sub-tela, Acompanhamentos,
+   e **Calls** (notas de reunião — pedido depois, mesmo padrão do `CallNotes.tsx`
+   do Planner v2). Sem RAG/chat: isso saiu do projeto (ver seção acima).
+4. **Sem router.** Abas trocadas por `useState`, igual ao `App.tsx` do Planner v2
+   — não há navegação profunda que justifique um roteador.
+5. **Frontend não entra no `docker-compose.yml`.** Bind mount do Vite no Docker
+   Desktop deixa o HMR lento no Windows; `npm run dev` local é mais rápido.
+   Backend continua subindo com `docker compose up` (api + db).
 
-### Decisões em aberto (perguntar, não presumir)
+### Canvas de design — aprovado
 
-1. **Onde o frontend mora:** pasta `frontend/` dentro do próprio `planner-api`
-   (monorepo), ou repositório separado? Se for monorepo, como o CI e o
-   `docker-compose.yml` acomodam um serviço a mais.
-2. **Stack:** a recomendação abaixo assume React + Vite + Tailwind v4 — mesma
-   combinação do Planner v2 — porque é o que permite reaproveitar os tokens de
-   design quase sem tradução. Confirmar com o Arthur antes de bater o martelo.
-3. **Escopo da v1:** provavelmente login + tela de tickets/tarefas + a tela de
-   chat do agente (RAG). A pauta de 1:1 e o diário podem ficar pra depois — perguntar.
+https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
 
-### As skills a usar (as mesmas do Planner v2)
+7 artboards (Login, Tickets, Tarefas, Equipe, Pauta, Acompanhamentos, Calls),
+mockups estáticos, direção "Vitrine" fiel ao Planner v2 (tokens, componentes,
+movimento — tudo lido direto do código-fonte de lá antes de desenhar, não
+reinventado). Logo do header é o panda do Planner v2
+(`Planner-v2/src/assets/panda.png`), copiado para
+`frontend/src/assets/panda.png` — o Arthur pediu explicitamente pra reaproveitar
+esse em vez de um ícone novo do svgrepo.com (o download direto de lá foi
+bloqueado por proteção anti-bot do site).
 
-O Arthur pediu explicitamente para reaproveitar as skills e a direção visual já
-aprovadas no Planner v2, não reinventar:
+### Scaffold — feito, PR #6 aberto aguardando revisão
 
-- **Skill `design`** (Claude Design canvas) — é como a direção visual do Planner v2
-  foi decidida: um canvas com as telas como artboards, publicado como Artifact,
-  antes de escrever uma linha de React. Usar o mesmo processo aqui: gerar o canvas,
-  o Arthur aprova a direção, só depois implementar.
-- **Skill `web-design-guidelines`** — revisão de código de UI contra as diretrizes
-  de interface web (acessibilidade, contraste, foco, etc.). Rodar depois que as
-  telas estiverem implementadas.
-- **Skill `react-best-practices`** — 60+ regras de performance/boas práticas React
-  (do pacote usado no Planner v2, `.claude/skills/react-best-practices/`). Usar
-  durante a implementação dos componentes.
-- Se o frontend ficar no mesmo diretório (`D:\Projetos Claude\`) que o Planner v2,
-  as skills já instaladas em `Planner-v2/.claude/skills/` podem só ser copiadas;
-  senão, reinstalar (`/plugin` ou o processo equivalente).
+https://github.com/arthursobral/planner-api/pull/6 (branch `frontend/00-setup`,
+CI verde). Contém:
 
-### Os tokens de design a reaproveitar (copiados do Planner v2, verbatim)
+- Projeto Vite+React+TS em `frontend/`, Tailwind v4 com os tokens em
+  `frontend/src/index.css` (copiados verbatim de `Planner-v2/src/index.css`).
+- Componentes de UI portados do Planner v2, sem mudança de lógica:
+  `FormPanel.tsx` (Campo, FormPanel, estilos de botão/campo), `Select.tsx`,
+  `CampoData.tsx` (+ `domain/data.ts`), `DisplayStats.tsx`, `DesfazerBar.tsx` +
+  `useRemocao.ts`. A única adaptação real: no Planner v2 o "desfazer" restaura
+  do IndexedDB; aqui `desfazer` deve chamar o endpoint `/restaurar` real (o
+  soft-delete já é uma chamada de API, não uma escrita local adiada).
+- `frontend/src/api/client.ts` — fetch com header `Authorization: Bearer`,
+  `ApiError` com a mensagem do `detail` do FastAPI, `login()` em
+  `application/x-www-form-urlencoded` (é `OAuth2PasswordRequestForm`, não JSON).
+- `frontend/src/api/types.ts` — interfaces TS espelhando `app/schemas.py`
+  campo a campo (snake_case, sem camadas de tradução).
+- `frontend/src/auth/AuthContext.tsx` — sessão via token em `localStorage`,
+  desloga sozinho num 401 de qualquer chamada.
+- `frontend/src/App.tsx` — header (panda + nome + data), 5 pills de navegação
+  (Tickets/Tarefas/Equipe/Acompanhamentos/Calls), portão de autenticação
+  (`Portao` renderiza `Login` ou o shell).
+- Um arquivo-stub por tela em `frontend/src/screens/` (`Login.tsx`,
+  `Tickets.tsx`, `Tarefas.tsx`, `Equipe.tsx`, `Pauta.tsx`,
+  `Acompanhamentos.tsx`, `Calls.tsx`) — cada um já com um comentário grande no
+  topo listando os endpoints exatos e o contrato de props que a implementação
+  real vai usar. **`Equipe.tsx` importa `Pauta.tsx`** com a assinatura fixa
+  `<Pauta pessoa={...} aoVoltar={...} />` (mesmo relacionamento
+  `EvaluationPanel`/`UmAum` do Planner v2) — os dois agents que forem mexer
+  nesses dois arquivos não podem mudar essa assinatura sem combinar.
+- CORS liberado na API (`app/config.py`: `frontend_origin`, `app/main.py`:
+  `CORSMiddleware`) para `http://localhost:5173`.
+- Job `frontend` novo no CI (`.github/workflows/ci.yml`): lint (oxlint), testes
+  (Vitest), build. Ainda não é um check obrigatório na ruleset da `master`
+  (só `test` é) — considerar adicionar se quiser travar merge nele também.
 
-A direção aprovada no Planner v2 chama-se **"Vitrine"**. Canvas original:
-`https://claude.ai/code/artifact/bbcdc86f-9bb5-4d2a-83ef-f9ea6305d7f7` (pode ter
-expirado; se sim, regerar com a skill `design` usando os tokens abaixo).
+**Antes de mexer em mais código:** revisar o PR #6. Se pedir mudança, ela deve
+entrar nessa mesma branch antes do merge — os 7 agents do próximo passo vão
+todos partir do estado pós-merge dela.
+
+### Plano dos 7 agents em paralelo — pronto pra disparar depois do merge do PR #6
+
+Pedido do Arthur: 7 agents, um por tela, cada um numa branch própria nomeada
+pelo que fez, todos rodando ao mesmo tempo, cada um commitando (sem
+`Co-Authored-By`, ver regra permanente no topo deste arquivo), PR aberto no
+final — **sem merge automático**, o Arthur revisa e mescla cada PR manualmente.
+
+Como isso fica tecnicamente possível sem os 7 pisarem uns nos outros: cada
+agent roda com `isolation: "worktree"` (cria um worktree git isolado, branch
+própria, sem disputa de arquivo de working directory com os outros) e cada um
+só edita o arquivo da própria tela em `frontend/src/screens/` — o scaffold já
+deixou tudo mais (App.tsx, componentes, api client, tokens) pronto e wireado,
+então não há necessidade de nenhum agent tocar em arquivo compartilhado.
+
+Branches sugeridas (nome = o que a branch faz):
+- `frontend/01-login`
+- `frontend/02-tickets`
+- `frontend/03-tarefas`
+- `frontend/04-equipe`
+- `frontend/05-pauta`
+- `frontend/06-acompanhamentos`
+- `frontend/07-calls`
+
+Cada agent recebe no prompt: o artboard correspondente no canvas de design, o
+comentário-contrato já escrito no topo do próprio arquivo-stub (endpoints,
+tipos, props), os componentes prontos em `frontend/src/components/`, e a
+instrução de rodar `react-best-practices` (skill já copiada para
+`.claude/skills/`) durante a implementação e deixar pelo menos um teste (Vitest
++ Testing Library) cobrindo o caminho principal da própria tela antes de
+commitar. Rodar `web-design-guidelines` depois que as 7 telas estiverem
+implementadas (skill também já copiada), numa passada só, não por agent.
+
+### As skills já copiadas para este projeto
+
+`.claude/skills/react-best-practices` e `.claude/skills/web-design-guidelines`
+foram copiadas de `Planner-v2/.claude/skills/` nesta sessão (mesmo diretório
+`D:\Projetos Claude\`, então foi só `cp -r`). A skill `design` (canvas) é do
+próprio Claude Code, não precisa copiar.
+
+### Os tokens de design — já implementados em `frontend/src/index.css`
+
+Referência para quem for mexer nas telas (o CSS já existe, isto é só pra
+entender o porquê). A direção chama-se **"Vitrine"**, aprovada originalmente no
+Planner v2 (canvas de lá:
+`https://claude.ai/code/artifact/bbcdc86f-9bb5-4d2a-83ef-f9ea6305d7f7`, pode ter
+expirado) e reaprovada aqui no canvas novo linkado acima.
 
 **Cores e superfícies:**
 - Fundo: `radial-gradient(120% 70% at 50% -20%, #1b2a52 0%, transparent 60%)` sobre
