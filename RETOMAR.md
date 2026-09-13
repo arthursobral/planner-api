@@ -40,8 +40,9 @@ force-push mesmo que quiséssemos).
   - #14 `frontend/07-calls` — Calls (notas de reunião)
 
   Todos os 7 rodaram `tsc -b`, `oxlint`, `npm run build` e `npm test` na própria
-  worktree antes de abrir o PR — conferir o CI do GitHub em cada um mesmo assim
-  antes de mesclar (`gh pr checks <n>`).
+  worktree antes de abrir o PR, **e o CI do GitHub está verde nos 7 agora**
+  (conferido às 05:15 — `gh pr checks <n>` em cada um). Revisar o diff mesmo
+  assim antes de mesclar, CI verde não substitui revisão.
 
 **Ajuste pequeno pendente, achado por 4 dos 7 agents de forma independente:**
 `frontend/vite.config.ts` não tem `globals: true` no bloco `test`, então o
@@ -53,13 +54,21 @@ branches) — mas depois que todos os PRs forem mesclados, vale adicionar
 remover os `afterEach` repetidos dos arquivos de teste, se quiser limpar a
 duplicação.
 
-**Outra sessão do Claude Code apareceu no meio do trabalho:** uma sessão
-chamada "planner-api-db" mandou mensagem perguntando se esse mesmo plano de 7
-telas já estava rodando aqui, porque as isolações por git worktree dela
-tinham falhado. Respondi com o status exato (visto acima) e pedi pra não
-duplicar. Se amanhã aparecer alguma branch/PR extra e inesperada relacionada
-a essas mesmas 7 telas, pode ter vindo de lá — conferir antes de presumir que
-foi esta sessão.
+**Outra sessão do Claude Code apareceu no meio do trabalho e ajudou:** uma
+sessão chamada "planner-api-db" mandou mensagem perguntando se esse mesmo
+plano de 7 telas já estava rodando aqui, porque as isolações por git worktree
+dela tinham falhado (nada duplicado — as 7 tentativas dela falharam antes de
+fazer qualquer coisa). Coordenamos por mensagem: ela ficou de fora das 7
+telas, mas encontrou e corrigiu um bug real de CI **numa branch própria,
+isolada, mesclada direto por ser baixo risco** — PR #16
+(`fix/app-test-mock-fetch`): `App.test.tsx` do scaffold não mockava `fetch`,
+e como o teste do "shell autenticado" agora monta uma tela real (Tickets, a
+primeira a terminar), isso disparava uma chamada de rede de verdade em CI
+(`ECONNREFUSED`) — corrigido com um stub padrão de `fetch` em
+`setupTests.ts`. Ela não tocou em nenhum dos 7 PRs de tela nem no checkout
+compartilhado deste diretório, só num worktree isolado próprio. **Já dei
+merge da master (com esse fix) em cada uma das 7 branches e conferi o CI —
+está tudo verde**, não precisa fazer isso de novo amanhã.
 
 **Ao retomar amanhã, primeiro passo:** rodar `gh pr list` para ver os 7 PRs,
 conferir CI de cada um (`gh pr checks <n>`), revisar o diff e mesclar um por
