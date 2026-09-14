@@ -53,15 +53,18 @@ projeto de portfólio, não substitui nada.
   # depois que o CI passar:
   gh pr merge --squash --delete-branch
   ```
-- **3 PRs mesclados até agora:**
-  - #1 — Documenta o fluxo de PR obrigatório para a master
-  - #2 — Fase 2: busca semântica (RAG) sobre os próprios dados
-  - #3 — Fase 3: agente com ferramentas (function calling)
-- **CI (GitHub Actions):** lint (`ruff`) + testes de domínio (puros) + testes de
-  integração (Postgres real via `docker compose`) + build da imagem Docker. Roda em
-  todo push e PR. Não depende de Ollama (pesado demais para CI) — isso fica pra
-  verificação manual.
-- **43 testes automatizados**, 11 arquivos em `tests/`, todos passando.
+- **19 PRs mesclados até 2026-09-14** — histórico completo no `git log`/GitHub;
+  os marcos de cada fase estão nas seções 4, 6, 7 e 9 abaixo.
+- **CI (GitHub Actions), dois jobs:**
+  - `test` (obrigatório na ruleset) — lint (`ruff`) + testes de domínio (puros)
+    + testes de integração (Postgres real via `docker compose`) + build da
+    imagem Docker do backend.
+  - `frontend` (informativo, não bloqueia merge ainda) — lint (`oxlint`),
+    testes (Vitest) e build do `frontend/`.
+  - Nenhum dos dois depende de Ollama (pesado demais para CI) — isso fica pra
+    verificação manual, de quando o RAG ainda existia aqui.
+- **22 testes automatizados no backend** (`tests/`) + **24 no frontend**
+  (`frontend/src/**/*.test.tsx`), todos passando.
 
 ## 3. Fase 0 — Setup
 
@@ -196,3 +199,64 @@ responder.
 - Exceções de ferramenta/execução externa nunca sobem cruas — viram resultado
   tratável pelo chamador (mesmo padrão em `ferramentas.executar` e no loop do
   agente).
+
+## 9. Frontend v1 (PRs #6-#14, #16, #19 — 2026-09-12 a 2026-09-14)
+
+**Objetivo:** sair do Swagger como única interface — uma UI de verdade sobre a
+API da Fase 1, reaproveitando a direção visual "Vitrine" já aprovada e em uso
+no [Planner v2](../Planner-v2).
+
+**Stack:** React + Vite + TypeScript + Tailwind v4, em `frontend/` (monorepo).
+Sem router (abas trocadas por `useState`, mesmo padrão do `App.tsx` do
+Planner v2) e sem serviço de frontend no `docker-compose.yml` (bind mount do
+Vite deixa o HMR lento no Docker Desktop pra Windows — `npm run dev` local é
+mais rápido).
+
+**Processo:** canvas de design (skill `design`) com os 7 artboards antes de
+qualquer código, aprovado pelo Arthur — tokens, componentes e movimento
+copiados do código-fonte real do Planner v2, não reinventados. Só depois: um
+scaffold compartilhado (PR #6 — Tailwind v4, componentes de UI portados
+verbatim do Planner v2, cliente HTTP com JWT, CORS na API, um stub por tela já
+wireado em `App.tsx`) e então **7 telas implementadas em paralelo**, uma por
+branch/PR, cada uma só tocando o próprio arquivo de tela — Login (#7),
+Tickets (#9), Pauta do 1:1 (#10), Tarefas (#11), Acompanhamentos (#12), Equipe
+(#13), Calls (#14). `Equipe.tsx` importa `Pauta.tsx` com um contrato de props
+fixo (`{pessoa, aoVoltar}`) combinado entre as duas branches, sem conflito de
+arquivo.
+
+**Telas:**
+
+| Tela | Entidade da API | Peça de UI notável |
+|---|---|---|
+| Login | `/auth/login` (JWT) | — |
+| Tickets | `Atividade` | barra de "tempo parado" proporcional ao mais antigo da lista |
+| Tarefas | `Todo` | colar lista com marcadores, parser no servidor |
+| Equipe | `Pessoa`, `PontoAvaliacao`, `Anotacao` | pontos negativos/positivos + diário, por pessoa |
+| Pauta do 1:1 | `GET /pessoas/{id}/pauta` | sub-tela de Equipe, "Copiar em Markdown" com fallback pra download |
+| Acompanhamentos | `Acompanhamento` | agrupado por pessoa, badge "equipe" quando resolvido pelo servidor |
+| Calls | `Reuniao` | autosave com debounce, "mandar itens pra Tarefas" |
+
+**Dois bugs de CI pegos e corrigidos depois do merge das 7 telas** (nenhum dos
+dois chegou a bloquear o merge — só `test`, o backend, é check obrigatório na
+ruleset; `frontend` é informativo):
+- **PR #16:** `App.test.tsx` do scaffold não mockava `fetch`; assim que a
+  primeira tela real (Tickets) passou a buscar dado ao montar, o teste do
+  shell autenticado disparava uma chamada de rede de verdade em CI
+  (`ECONNREFUSED`). Fix: stub padrão de `fetch` em `setupTests.ts`.
+- **PR #19:** `Equipe.test.tsx` mocka o módulo `apiFetch` inteiro; como
+  `Pauta.tsx` importa o mesmo módulo, a chamada dela (disparada ao clicar
+  "Preparar 1:1") caía no fallback do mock (`[]`) e quebrava tentando ler
+  `.marco_atual.titulo` de um array — bug só do teste, a API real sempre
+  devolve o objeto completo.
+
+**Outro bug, de ambiente, não de código:** `docker compose up -d` reaproveita
+a imagem já buildada da API em vez de reconstruir sozinho — depois de somar o
+CORS ao `main.py`, o container continuou rodando a imagem antiga (sem CORS)
+até um `docker compose up -d --build api` manual. Vale lembrar disso sempre
+que o container parecer não refletir uma mudança recente em `app/`.
+
+**Duas sessões do Claude Code trabalharam nisso ao mesmo tempo** sem
+perceberem uma a outra até a metade do trabalho (o Arthur pediu a mesma coisa
+em duas janelas) — coordenaram por mensagem direta entre sessões depois que
+uma notou branches/PRs inesperados; sem duplicação real de trabalho, só os
+dois bugs de CI acima descobertos e corrigidos por uma delas.
