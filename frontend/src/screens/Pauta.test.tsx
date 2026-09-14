@@ -43,6 +43,21 @@ describe('Pauta', () => {
     expect(screen.getByText('Entregou antes do prazo')).toBeVisible()
   })
 
+  it('na primeira conversa (sem "desde"), mostra tudo em "novidades" em vez de "anteriores"', async () => {
+    const pautaPrimeiraVez: PautaApi = {
+      ...pautaMock,
+      desde: null,
+      novidades: [{ em: '2026-08-29', texto: 'Único fato registrado até agora' }],
+      anteriores: [],
+    }
+    vi.mocked(apiFetch).mockResolvedValue(pautaPrimeiraVez)
+    render(<Pauta pessoa={pessoa} aoVoltar={vi.fn()} />)
+
+    expect(await screen.findByText('Tudo que está anotado')).toBeVisible()
+    expect(screen.getByText('Único fato registrado até agora')).toBeVisible()
+    expect(screen.queryByText('Nada anotado no período.')).toBeNull()
+  })
+
   it('clicar em Voltar chama aoVoltar', async () => {
     vi.mocked(apiFetch).mockResolvedValue(pautaMock)
     const aoVoltar = vi.fn()
