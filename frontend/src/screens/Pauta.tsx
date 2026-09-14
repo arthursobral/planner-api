@@ -78,8 +78,11 @@ export function Pauta({ pessoa, aoVoltar }: { pessoa: Pessoa; aoVoltar: () => vo
     return <div className="surface h-[320px] animate-pulse rounded-[var(--radius-surface)]" />
   }
 
-  const usaAnteriores = !pauta.desde
-  const itensRecentes = usaAnteriores ? pauta.anteriores : pauta.novidades
+  // `anteriores` só existe quando há um `desde` (1:1 anterior) pra separar
+  // "o que é novo" do que já era antigo; sem um 1:1 anterior, a API põe tudo
+  // em `novidades` e deixa `anteriores` vazio — não o contrário.
+  const primeiraConversa = !pauta.desde
+  const itensRecentes = pauta.novidades
 
   return (
     <div className="flex flex-col gap-8">
@@ -119,7 +122,7 @@ export function Pauta({ pessoa, aoVoltar }: { pessoa: Pessoa; aoVoltar: () => vo
         </div>
       </div>
 
-      <Secao titulo={usaAnteriores ? 'Tudo que está anotado' : 'Desde a última conversa'} atraso={80}>
+      <Secao titulo={primeiraConversa ? 'Tudo que está anotado' : 'Desde a última conversa'} atraso={80}>
         {itensRecentes.length === 0 ? (
           <Vazio>Nada anotado no período.</Vazio>
         ) : (
