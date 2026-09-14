@@ -4,6 +4,14 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 .claude
 # Conteúdo institucional do empregador (critérios de progressão) — nunca versionar.
 criterios.local.json
+
+# Editor e SO — não é código deste projeto.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
