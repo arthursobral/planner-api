@@ -1,43 +1,41 @@
-# planner-api
+# Planner
 
-Projeto Pessoal do roteiro de portfólio de engenharia de IA — Fase 1. Uma API para
-o problema real de um team lead: tickets de trabalho, lista de tarefas,
-acompanhamento de itens com direct reports, notas de reunião e a montagem automática
-da pauta de 1:1.
+Uma ferramenta pessoal para o dia a dia de um team lead: tickets de trabalho,
+lista de tarefas, acompanhamento de itens com direct reports, diário da
+equipe, notas de reunião e a montagem automática da pauta de 1:1 — a partir do
+que já foi registrado, sem precisar reler anotação por anotação.
 
-Inspirado no [Planner v2](../Planner-v2) (React/Dexie, uso diário real há 14 meses) —
-mesmo domínio e mesmas regras de negócio já validadas, reescritas do zero em
-FastAPI + SQLAlchemy + PostgreSQL. O Planner v2 não foi tocado; continua sendo a
-ferramenta do dia a dia.
+API em FastAPI + frontend em React, ambos neste repositório.
 
-**Nota:** este repositório já teve um RAG e um agente com ferramentas (Fases 2-3 do
-roteiro) rodando sobre esses mesmos dados. Foram removidos de propósito para
-manter este projeto focado só na Fase 1 (API de planner) — RAG/agente vira
-aprendizado em um projeto novo e separado, sobre uma base de conhecimento
-diferente. Ver histórico do git (PRs #2 e #3) para o código removido.
+## O problema
+
+Preparar um 1:1 de verdade significa lembrar o que mudou desde a última
+conversa: o que a pessoa fez, o que ficou pendente, o que já evoluiu. Isso
+normalmente vive espalhado — em anotações soltas, na cabeça, em nenhum lugar.
+O Planner junta tudo automaticamente: registre o dia a dia (tickets, diário,
+pontos de avaliação) e a pauta do 1:1 se monta sozinha.
+
+## As telas
+
+| Tela | O que faz |
+|---|---|
+| **Tickets** | Lista de trabalho em andamento, com prioridade e tempo parado calculado — o ticket mais antigo sobe pro topo sozinho. |
+| **Tarefas** | Cole uma lista com marcadores (`* [ ]`, `-`, `1.`) e ela vira itens organizados por status, com indentação virando subnível. |
+| **Equipe** | Pontos de avaliação (o que precisa evoluir, pontos fortes) e o diário de cada pessoa — os fatos que sustentam uma conversa de avaliação meses depois. |
+| **Pauta do 1:1** | Um clique em "Preparar 1:1" monta a pauta: o que mudou desde a última conversa, pontos abertos, o que já evoluiu — pronta para copiar em Markdown. |
+| **Acompanhamentos** | O que está sendo cobrado com qualquer pessoa, dentro ou fora da equipe, agrupado por quem está com o quê. |
+| **Calls** | Notas de reunião com autosave — o que foi marcado como item de ação vira tarefa com um clique, sem redigitar. |
 
 ## Stack
 
-FastAPI, SQLAlchemy 2.0, PostgreSQL, JWT (usuário único), Docker Compose, pytest.
+**Backend:** FastAPI, SQLAlchemy 2.0, PostgreSQL, JWT, Docker Compose, pytest.
+**Frontend:** React, TypeScript, Vite, Tailwind v4.
 
-Segue sem frontend — a interface para explorar/usar é o Swagger em `/docs`. Um
-frontend é coisa para mais adiante, sem data definida.
-
-## Fluxo de trabalho
-
-`master` é protegida: push direto é recusado, toda mudança entra por Pull Request,
-e o PR só pode ser mesclado com o CI verde (`test` no GitHub Actions). Não precisa
-de aprovação de outra pessoa — é um projeto solo — mas precisa existir o PR, com o
-diff visível, um por vez.
-
-```bash
-git checkout -b fase-x-o-que-mudou
-# ... commits ...
-git push -u origin fase-x-o-que-mudou
-gh pr create --fill
-# depois que o CI passar:
-gh pr merge --squash
-```
+Domínio e regras de negócio portados do [Planner v2](../Planner-v2) (React +
+IndexedDB, em uso diário real há mais de um ano) — mesmo problema, mesma
+lógica já validada por uso real, reescrito do zero com um backend de verdade.
+A direção visual ("Vitrine") também vem de lá, reaproveitada quase sem
+tradução.
 
 ## Como rodar
 
@@ -51,60 +49,88 @@ docker compose run --rm --no-deps api python -c "from app.security import hash_p
 docker compose up
 ```
 
-Abre em `http://localhost:8000/docs`. Faça login em `/auth/login` (usuário/senha do
-`.env`), use o botão "Authorize" do Swagger com o token retornado, e explore os
-endpoints.
+Isso sobe a API em `http://localhost:8000` (Swagger em `/docs`, se quiser
+explorar os endpoints direto). Num terminal separado:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Abre em `http://localhost:5173` e faça login com o usuário/senha do `.env`.
 
 Num banco vazio e com `SEED_DEMO_DATA=true` (padrão), a API cadastra sozinha um
 punhado de pessoas/tickets/tarefas **fictícios** (gerados com Faker) só para ter algo
 para explorar. Ligue `SEED_DEMO_DATA=false` para começar realmente vazio.
 
-## Privacidade — leia antes de usar com dado real
-
-Este projeto nasceu inspirado numa ferramenta que guarda avaliação nominal de
-pessoas de verdade. Três regras não são negociáveis:
-
-- **Nunca commitar `.env`.** Ele tem o segredo do JWT e a senha do único usuário.
-  Só `.env.example`, com placeholders, é versionado.
-- **O seed do repositório (`app/seed.py`) só usa nomes gerados por Faker.** Se você
-  quiser cadastrar pessoas reais para uso pessoal, cadastre pelas rotas da própria
-  API (`POST /pessoas`, etc.) — esse dado fica só no volume Docker do seu Postgres
-  local, nunca no git.
-- **`criterios.local.json`** (se você criar um, para preencher a seção de
-  expectativas da pauta de 1:1 — ver `app/domain/pauta.py`) também nunca é
-  versionado: é conteúdo institucional do seu empregador, não deste projeto.
+> Se mudar algo em `app/` e o container parecer não refletir a mudança,
+> `docker compose up -d --build api` — o `up` normal reaproveita a imagem já
+> construída, não reconstrói sozinho.
 
 ## Testes
 
 ```bash
+# backend
 pip install -r requirements-dev.txt
+python -m pytest tests -k domain     # puros, sem banco
+python -m pytest tests/              # completo, precisa de `docker compose up -d db`
 
-# "python -m pytest", não só "pytest": é o que garante a raiz do projeto no
-# sys.path, para o "import app" funcionar sem instalar o pacote.
-#
-# "-k domain" em vez de "tests/test_domain_*.py": PowerShell não expande "*"
-# para comandos externos como bash faz — o glob chegaria literal no pytest e
-# ele não acharia o arquivo. "-k" filtra pelo nome e funciona igual nos dois.
+# frontend
+cd frontend
+npm test
+```
 
-# puros, sem banco:
-python -m pytest tests -k domain
+## Privacidade — leia antes de usar com dado real
 
-# integração, precisa de Postgres rodando (docker compose up -d db):
-python -m pytest tests/
+Este projeto guarda avaliação nominal de pessoas de verdade quando usado para
+valer. Regras não-negociáveis:
+
+- **Nunca commitar `.env`.** Ele tem o segredo do JWT e a senha do único usuário.
+  Só `.env.example`, com placeholders, é versionado.
+- **O seed do repositório (`app/seed.py`) só usa nomes gerados por Faker.** Se
+  você quiser cadastrar pessoas reais para uso pessoal, cadastre pelas rotas da
+  própria API (`POST /pessoas`, etc.) — esse dado fica só no volume Docker do
+  seu Postgres local, nunca no git.
+- **`criterios.local.json`** (se você criar um, para preencher a seção de
+  expectativas da pauta de 1:1 — ver `app/domain/pauta.py`) também nunca é
+  versionado: é conteúdo institucional do seu empregador, não deste projeto.
+- **Não há multiusuário.** É uma ferramenta pessoal de propósito — uma única
+  credencial fixa no `.env`, sem tabela de usuários nem isolamento de dados por
+  conta. Não é um produto multi-tenant.
+
+## Fluxo de trabalho
+
+`master` é protegida: push direto é recusado, toda mudança entra por Pull
+Request, e só mescla com o CI verde. Não precisa de aprovação de outra pessoa
+— é um projeto solo — mas precisa existir o PR, com o diff visível.
+
+```bash
+git checkout -b nome-do-que-mudou
+# ... commits ...
+git push -u origin nome-do-que-mudou
+gh pr create --fill
+# depois que o CI passar:
+gh pr merge --squash --delete-branch
 ```
 
 ## O que foi deixado de fora de propósito
 
-- **Alembic/migrações.** Schema ainda simples e sem dado em produção — o app cria
-  as tabelas sozinho no startup (`Base.metadata.create_all`). Trocar por migrações
-  no dia em que o schema precisar evoluir sem poder recriar o banco do zero.
-- **Backup/export JSON manual.** Só fazia sentido no Planner v2 porque o Dexie não
-  tem servidor. Aqui o Postgres + o volume do Docker Compose já dão durabilidade —
-  reinventar isso seria regredir, não portar.
+- **Alembic/migrações.** Schema ainda simples e sem dado em produção — o app
+  cria as tabelas sozinho no startup. Trocar por migrações no dia em que o
+  schema precisar evoluir sem poder recriar o banco do zero.
 - **Conteúdo institucional de progressão** (textos de expectativa por marco de
-  tempo de casa). É propriedade do empregador de quem usa isto, não deste projeto
-  — ver `criterios.local.json` acima.
-- **Frontend e multiusuário/roles.** Fora do escopo do roteiro até aqui.
-- **RAG e agente com ferramentas.** Existiram neste repositório (Fases 2-3 do
-  roteiro, PRs #2 e #3) e foram removidos de propósito — ver a nota no topo deste
-  README.
+  tempo de casa). É propriedade do empregador de quem usa isto, não deste
+  projeto — ver `criterios.local.json` acima.
+- **Multiusuário/roles.** Ver seção de privacidade.
+- **Router no frontend.** As telas são abas trocadas por estado local, não
+  URLs — não há navegação profunda que justifique um roteador aqui.
+- **RAG e agente com ferramentas.** Existiram neste repositório e foram
+  removidos de propósito, pra virar aprendizado num projeto novo e separado
+  sobre uma base pública — ver `RETOMAR.md` para o contexto completo.
+
+---
+
+Documentação mais detalhada: [`PROJETO.md`](PROJETO.md) (histórico e decisões),
+[`RETOMAR.md`](RETOMAR.md) (o que vem a seguir), [`frontend/README.md`](frontend/README.md)
+(estrutura do frontend).
