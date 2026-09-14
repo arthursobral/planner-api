@@ -7,6 +7,8 @@ que já foi registrado, sem precisar reler anotação por anotação.
 
 API em FastAPI + frontend em React, ambos neste repositório.
 
+![Tela de Tickets do Planner](docs/screenshots/tickets.png)
+
 ## O problema
 
 Preparar um 1:1 de verdade significa lembrar o que mudou desde a última
@@ -25,6 +27,31 @@ pontos de avaliação) e a pauta do 1:1 se monta sozinha.
 | **Pauta do 1:1** | Um clique em "Preparar 1:1" monta a pauta: o que mudou desde a última conversa, pontos abertos, o que já evoluiu — pronta para copiar em Markdown. |
 | **Acompanhamentos** | O que está sendo cobrado com qualquer pessoa, dentro ou fora da equipe, agrupado por quem está com o quê. |
 | **Calls** | Notas de reunião com autosave — o que foi marcado como item de ação vira tarefa com um clique, sem redigitar. |
+
+<details>
+<summary><strong>Screenshots de todas as telas</strong> (clique para expandir)</summary>
+
+**Login**
+![Tela de login](docs/screenshots/login.png)
+
+**Tarefas** — lista colada vira itens organizados por status
+![Tela de Tarefas](docs/screenshots/tarefas.png)
+
+**Equipe** — pontos de avaliação e diário por pessoa
+![Tela de Equipe](docs/screenshots/equipe.png)
+
+**Pauta do 1:1** — montada automaticamente a partir do que já foi registrado
+![Tela de Pauta do 1:1](docs/screenshots/pauta.png)
+
+**Acompanhamentos** — agrupado por pessoa, dentro ou fora da equipe
+![Tela de Acompanhamentos](docs/screenshots/acompanhamentos.png)
+
+**Calls** — notas de reunião com autosave
+![Tela de Calls](docs/screenshots/calls.png)
+
+*(Dados fictícios gerados com Faker + exemplos escritos à mão, só para demonstração — ver seção de Privacidade.)*
+
+</details>
 
 ## Stack
 
