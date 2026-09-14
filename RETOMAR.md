@@ -13,7 +13,7 @@ aqui o que já está lá.
 O repositório está em https://github.com/arthursobral/planner-api (público,
 `master` protegida — todo trabalho novo é branch + PR, ver `README.md`).
 
-**Regra permanente deste projeto (2026-09-12): nunca adicionar atribuição do
+**Regra permanente deste projeto: nunca adicionar atribuição do
 Claude/Anthropic em commits ou PRs aqui** (nem `Co-Authored-By`, nem
 "Generated with"). O Arthur pediu explicitamente depois de notar a linha num PR
 já mesclado — checamos via `gh api repos/arthursobral/planner-api/contributors`
@@ -23,62 +23,47 @@ aparecia no texto do commit. Decisão: só parar de adicionar dali pra frente,
 sem reescrever o histórico já público (a `master` protegida recusaria o
 force-push mesmo que quiséssemos).
 
-**Estado agora (2026-09-12, fim da sessão — Arthur foi dormir, revisar amanhã):**
-- PR #6 (scaffold) e o PR de atualização deste arquivo **já mesclados** na
-  master (a pedido do Arthur — baixo risco, só infraestrutura/documentação).
-- Canvas de design aprovado: https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
-- **Os 7 agents em paralelo terminaram, cada um com PR aberto, sem merge** —
-  é isso que precisa ser revisado amanhã, um por um:
-  - #7 `frontend/01-login` — Login
-  - #9 `frontend/02-tickets` — Tickets (Atividades)
-  - #11 `frontend/03-tarefas` — Tarefas (Todos)
-  - #13 `frontend/04-equipe` — Equipe (pontos + diário) — depende de #10 para a
-    experiência completa do botão "Preparar 1:1" (a sub-tela de Pauta fica como
-    stub até #10 ser mesclado também, mas não há conflito de arquivo entre eles)
-  - #10 `frontend/05-pauta` — sub-tela de Pauta do 1:1
-  - #12 `frontend/06-acompanhamentos` — Acompanhamentos
-  - #14 `frontend/07-calls` — Calls (notas de reunião)
+---
 
-  Todos os 7 rodaram `tsc -b`, `oxlint`, `npm run build` e `npm test` na própria
-  worktree antes de abrir o PR, **e o CI do GitHub está verde nos 7 agora**
-  (conferido às 05:15 — `gh pr checks <n>` em cada um). Revisar o diff mesmo
-  assim antes de mesclar, CI verde não substitui revisão.
+## Estado em 2026-09-14: frontend v1 concluído e mesclado
 
-**Ajuste pequeno pendente, achado por 4 dos 7 agents de forma independente:**
-`frontend/vite.config.ts` não tem `globals: true` no bloco `test`, então o
-auto-cleanup do Testing Library entre testes não é registrado sozinho. Cada
-agent contornou isso com `afterEach(cleanup)` local no próprio arquivo de
-teste (correto, evitou mexer em config compartilhada e conflitar entre as 7
-branches) — mas depois que todos os PRs forem mesclados, vale adicionar
-`globals: true` (ou um `afterEach(cleanup)` central em `setupTests.ts`) e
-remover os `afterEach` repetidos dos arquivos de teste, se quiser limpar a
-duplicação.
+As 7 telas (Login, Tickets, Tarefas, Equipe, Pauta do 1:1, Acompanhamentos,
+Calls) estão implementadas, testadas e **mescladas na master** — histórico
+completo, decisões e tokens de design em `PROJETO.md`, seção 9. Canvas de
+design aprovado:
+https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
 
-**Outra sessão do Claude Code apareceu no meio do trabalho e ajudou:** uma
-sessão chamada "planner-api-db" mandou mensagem perguntando se esse mesmo
-plano de 7 telas já estava rodando aqui, porque as isolações por git worktree
-dela tinham falhado (nada duplicado — as 7 tentativas dela falharam antes de
-fazer qualquer coisa). Coordenamos por mensagem: ela ficou de fora das 7
-telas, mas encontrou e corrigiu um bug real de CI **numa branch própria,
-isolada, mesclada direto por ser baixo risco** — PR #16
-(`fix/app-test-mock-fetch`): `App.test.tsx` do scaffold não mockava `fetch`,
-e como o teste do "shell autenticado" agora monta uma tela real (Tickets, a
-primeira a terminar), isso disparava uma chamada de rede de verdade em CI
-(`ECONNREFUSED`) — corrigido com um stub padrão de `fetch` em
-`setupTests.ts`. Ela não tocou em nenhum dos 7 PRs de tela nem no checkout
-compartilhado deste diretório, só num worktree isolado próprio. **Já dei
-merge da master (com esse fix) em cada uma das 7 branches e conferi o CI —
-está tudo verde**, não precisa fazer isso de novo amanhã.
+**Como rodar e testar:** `docker compose up` (api + db) num terminal, `cd
+frontend && npm install && npm run dev` noutro, abre `http://localhost:5173`.
+Login com o usuário/senha do `.env` (`ADMIN_USER`/`ADMIN_PASSWORD_HASH`).
 
-**Ao retomar amanhã, primeiro passo:** rodar `gh pr list` para ver os 7 PRs,
-conferir CI de cada um (`gh pr checks <n>`), revisar o diff e mesclar um por
-um (squash, mesma convenção de sempre). Como `frontend/04-equipe` e
-`frontend/05-pauta` se completam mutuamente mas não têm conflito de arquivo
-(cada um só tocou no próprio arquivo de tela), a ordem de merge entre eles não
-importa tecnicamente — só depois que os dois estiverem mesclados é que o botão
-"Preparar 1:1" mostra a pauta de verdade em vez do stub. Se algum agent não
-terminou ou não abriu PR, rode `gh pr list` e `git branch -r` para ver o que
-realmente existe antes de presumir.
+**Duas pegadinhas de ambiente, já resolvidas mas fáceis de esquecer:**
+- `docker compose up -d` **não reconstrói a imagem da API sozinho** — se você
+  mudar algo em `app/` (como o CORS foi mudado nesta rodada) e o container
+  parecer não refletir a mudança, rode `docker compose up -d --build api`.
+- O `.env` precisa de `ADMIN_PASSWORD_HASH` gerado com
+  `python -c "from app.security import hash_password; print(hash_password('sua-senha'))"`,
+  colado com cada `$` duplicado para `$$` (o docker compose interpola `$` em
+  arquivos `.env` — comentário já no `.env.example`).
+
+### Pendências pequenas, não bloqueantes
+
+- **`frontend/vite.config.ts` não tem `globals: true`** no bloco `test`, então
+  o auto-cleanup do Testing Library não é automático — cada arquivo de teste
+  contorna isso com um `afterEach(cleanup)` próprio (funciona, só é repetido
+  7x). Trocar por `globals: true` (ou um `afterEach(cleanup)` central em
+  `setupTests.ts`) e remover os repetidos, se quiser limpar a duplicação.
+- **Skill `web-design-guidelines` ainda não rodou** sobre as 7 telas reais
+  (só foi usada pra aprovar o canvas antes de codar). Vale rodar uma passada
+  de revisão (acessibilidade, contraste, foco) agora que o código existe.
+- **Job `frontend` do CI ainda não é obrigatório** na ruleset da `master` (só
+  `test`, o backend, é). Foi assim que dois bugs de teste do frontend (PRs
+  #16 e #19) chegaram a ficar mesclados por um tempo sem bloquear nada — considerar
+  adicionar `frontend` como check obrigatório também, na ruleset do GitHub.
+- **Multiusuário: não existe.** Confirmado com o Arthur — é um app pessoal de
+  propósito, sem tabela de usuários nem `usuario_id` em nenhuma tabela. Se
+  algum dia isso mudar, é uma migração de schema de verdade, não uma feature
+  que já está lá desligada.
 
 ---
 
@@ -89,7 +74,7 @@ repositório. Motivo: manter o `planner-api` como o "Projeto Pessoal" puro (API 
 planner — Fase 1 do roteiro), e mover o aprendizado de RAG/agentes para um
 **projeto novo e separado**, sobre uma base de conhecimento diferente (candidato a
 virar o "Projeto Produto" público das Fases 4-6, já que aquele nunca pode ser
-este repositório com dado nominal real).
+este repositório com dado nominal real). **Ainda não começado.**
 
 **Não fazer de novo:** o código removido (embeddings via `fastembed`, Postgres
 + `pgvector`, geração via Ollama local, agente com function calling, chunking,
@@ -105,179 +90,6 @@ presumir):
 - Se mantém a regra de custo zero (embeddings/LLM locais) ou se, sendo um projeto
   público sem dado sensível, faz sentido usar uma API paga (ex.: Claude) para uma
   resposta melhor que os 67% medidos aqui com `llama3.2:3b`.
-
----
-
-## O frontend — estado detalhado e próximos passos
-
-Decisões já tomadas nesta sessão (não perguntar de novo):
-
-1. **Onde mora:** monorepo, pasta `frontend/` dentro do próprio `planner-api`.
-2. **Stack:** React + Vite + TypeScript + Tailwind v4 — mesma combinação do
-   Planner v2, tokens portados quase sem tradução.
-3. **Escopo da v1:** Login, Tickets (Atividades), Tarefas (Todos), Equipe
-   (pontos de avaliação + diário) com a Pauta de 1:1 como sub-tela, Acompanhamentos,
-   e **Calls** (notas de reunião — pedido depois, mesmo padrão do `CallNotes.tsx`
-   do Planner v2). Sem RAG/chat: isso saiu do projeto (ver seção acima).
-4. **Sem router.** Abas trocadas por `useState`, igual ao `App.tsx` do Planner v2
-   — não há navegação profunda que justifique um roteador.
-5. **Frontend não entra no `docker-compose.yml`.** Bind mount do Vite no Docker
-   Desktop deixa o HMR lento no Windows; `npm run dev` local é mais rápido.
-   Backend continua subindo com `docker compose up` (api + db).
-
-### Canvas de design — aprovado
-
-https://claude.ai/code/artifact/1c58707d-cba9-4455-85ab-813e234bf190
-
-7 artboards (Login, Tickets, Tarefas, Equipe, Pauta, Acompanhamentos, Calls),
-mockups estáticos, direção "Vitrine" fiel ao Planner v2 (tokens, componentes,
-movimento — tudo lido direto do código-fonte de lá antes de desenhar, não
-reinventado). Logo do header é o panda do Planner v2
-(`Planner-v2/src/assets/panda.png`), copiado para
-`frontend/src/assets/panda.png` — o Arthur pediu explicitamente pra reaproveitar
-esse em vez de um ícone novo do svgrepo.com (o download direto de lá foi
-bloqueado por proteção anti-bot do site).
-
-### Scaffold — feito, PR #6 aberto aguardando revisão
-
-https://github.com/arthursobral/planner-api/pull/6 (branch `frontend/00-setup`,
-CI verde). Contém:
-
-- Projeto Vite+React+TS em `frontend/`, Tailwind v4 com os tokens em
-  `frontend/src/index.css` (copiados verbatim de `Planner-v2/src/index.css`).
-- Componentes de UI portados do Planner v2, sem mudança de lógica:
-  `FormPanel.tsx` (Campo, FormPanel, estilos de botão/campo), `Select.tsx`,
-  `CampoData.tsx` (+ `domain/data.ts`), `DisplayStats.tsx`, `DesfazerBar.tsx` +
-  `useRemocao.ts`. A única adaptação real: no Planner v2 o "desfazer" restaura
-  do IndexedDB; aqui `desfazer` deve chamar o endpoint `/restaurar` real (o
-  soft-delete já é uma chamada de API, não uma escrita local adiada).
-- `frontend/src/api/client.ts` — fetch com header `Authorization: Bearer`,
-  `ApiError` com a mensagem do `detail` do FastAPI, `login()` em
-  `application/x-www-form-urlencoded` (é `OAuth2PasswordRequestForm`, não JSON).
-- `frontend/src/api/types.ts` — interfaces TS espelhando `app/schemas.py`
-  campo a campo (snake_case, sem camadas de tradução).
-- `frontend/src/auth/AuthContext.tsx` — sessão via token em `localStorage`,
-  desloga sozinho num 401 de qualquer chamada.
-- `frontend/src/App.tsx` — header (panda + nome + data), 5 pills de navegação
-  (Tickets/Tarefas/Equipe/Acompanhamentos/Calls), portão de autenticação
-  (`Portao` renderiza `Login` ou o shell).
-- Um arquivo-stub por tela em `frontend/src/screens/` (`Login.tsx`,
-  `Tickets.tsx`, `Tarefas.tsx`, `Equipe.tsx`, `Pauta.tsx`,
-  `Acompanhamentos.tsx`, `Calls.tsx`) — cada um já com um comentário grande no
-  topo listando os endpoints exatos e o contrato de props que a implementação
-  real vai usar. **`Equipe.tsx` importa `Pauta.tsx`** com a assinatura fixa
-  `<Pauta pessoa={...} aoVoltar={...} />` (mesmo relacionamento
-  `EvaluationPanel`/`UmAum` do Planner v2) — os dois agents que forem mexer
-  nesses dois arquivos não podem mudar essa assinatura sem combinar.
-- CORS liberado na API (`app/config.py`: `frontend_origin`, `app/main.py`:
-  `CORSMiddleware`) para `http://localhost:5173`.
-- Job `frontend` novo no CI (`.github/workflows/ci.yml`): lint (oxlint), testes
-  (Vitest), build. Ainda não é um check obrigatório na ruleset da `master`
-  (só `test` é) — considerar adicionar se quiser travar merge nele também.
-
-PR #6 já foi mesclado (ver estado no topo deste arquivo).
-
-### Plano dos 7 agents em paralelo — já executado, PRs aguardando revisão
-
-Pedido do Arthur: 7 agents, um por tela, cada um numa branch própria nomeada
-pelo que fez, todos rodando ao mesmo tempo, cada um commitando (sem
-`Co-Authored-By`, ver regra permanente no topo deste arquivo), PR aberto no
-final — **sem merge automático**, o Arthur revisa e mescla cada PR manualmente.
-Isso foi disparado no fim desta sessão (2026-09-12) — os 7 PRs devem estar
-prontos para revisão amanhã (ver lista de branches no topo deste arquivo).
-
-Como isso fica tecnicamente possível sem os 7 pisarem uns nos outros: cada
-agent roda com `isolation: "worktree"` (cria um worktree git isolado, branch
-própria, sem disputa de arquivo de working directory com os outros) e cada um
-só edita o arquivo da própria tela em `frontend/src/screens/` — o scaffold já
-deixou tudo mais (App.tsx, componentes, api client, tokens) pronto e wireado,
-então não há necessidade de nenhum agent tocar em arquivo compartilhado.
-
-Branches sugeridas (nome = o que a branch faz):
-- `frontend/01-login`
-- `frontend/02-tickets`
-- `frontend/03-tarefas`
-- `frontend/04-equipe`
-- `frontend/05-pauta`
-- `frontend/06-acompanhamentos`
-- `frontend/07-calls`
-
-Cada agent recebe no prompt: o artboard correspondente no canvas de design, o
-comentário-contrato já escrito no topo do próprio arquivo-stub (endpoints,
-tipos, props), os componentes prontos em `frontend/src/components/`, e a
-instrução de rodar `react-best-practices` (skill já copiada para
-`.claude/skills/`) durante a implementação e deixar pelo menos um teste (Vitest
-+ Testing Library) cobrindo o caminho principal da própria tela antes de
-commitar. Rodar `web-design-guidelines` depois que as 7 telas estiverem
-implementadas (skill também já copiada), numa passada só, não por agent.
-
-### As skills já copiadas para este projeto
-
-`.claude/skills/react-best-practices` e `.claude/skills/web-design-guidelines`
-foram copiadas de `Planner-v2/.claude/skills/` nesta sessão (mesmo diretório
-`D:\Projetos Claude\`, então foi só `cp -r`). A skill `design` (canvas) é do
-próprio Claude Code, não precisa copiar.
-
-### Os tokens de design — já implementados em `frontend/src/index.css`
-
-Referência para quem for mexer nas telas (o CSS já existe, isto é só pra
-entender o porquê). A direção chama-se **"Vitrine"**, aprovada originalmente no
-Planner v2 (canvas de lá:
-`https://claude.ai/code/artifact/bbcdc86f-9bb5-4d2a-83ef-f9ea6305d7f7`, pode ter
-expirado) e reaprovada aqui no canvas novo linkado acima.
-
-**Cores e superfícies:**
-- Fundo: `radial-gradient(120% 70% at 50% -20%, #1b2a52 0%, transparent 60%)` sobre
-  `#0d1226`.
-- Superfície (cards, painéis): `linear-gradient(180deg, rgba(79,172,254,.055),
-  rgba(79,172,254,0) 42%)` sobre `#131a34`, borda `rgba(120,160,230,.14)`, e
-  **`box-shadow: inset 0 1px 0 rgba(190,215,255,.10)`** — esse realce interno de
-  1px no topo é o que faz a peça parecer física; sem ele a direção perde a graça.
-- Texto: `#ffffff` (ênfase), `#dfe4f0` (corpo), `#a8b2cf` (secundário), `#8b96b8`
-  (apagado).
-- Acento: `linear-gradient(135deg, #4facfe, #00f2fe)`, texto sobre acento
-  `#0b1020`.
-- Semântica: erro `#ff6b6b`/`#ff8a80`, atenção `#ffc107`/`#ffd54f`, sucesso
-  `#4caf50`/`#81c784`.
-
-**Escala de raio (regra fechada, não desviar):**
-
-| valor | onde |
-|---|---|
-| 14px | superfície e card |
-| 12px | controle de 38px ou mais |
-| 10px | controle de até 34px |
-| 9px | pílula e badge |
-| 6px | checkbox |
-| 2-3px | barra de progresso e marca de prioridade |
-
-**Tipografia:** fonte Sora, pesos 300-700, fallback `'Segoe UI', system-ui`.
-Numeral sempre com `font-variant-numeric: tabular-nums`. Título de tela 30px/600
-com `letter-spacing: -0.8px`; número em display 34px/600 com `-1px`.
-
-**Layout:** separação por espaço, não por régua. Itens de lista como superfícies
-com `gap` de 11px. Um número promovido a display por tela, numa faixa sem caixa
-nenhuma.
-
-**Movimento — só estes quatro, nada além:**
-1. Entrada em sequência de 60ms por bloco, `cubic-bezier(.16, 1, .3, 1)`, uma vez
-   por tela.
-2. Barra que cresce até o valor real (progresso, posição, tempo parado).
-3. Realce de 1px ao apontar item interativo.
-4. Feedback real na ação mais significativa da tela.
-
-Todo movimento tem bloco `@media (prefers-reduced-motion: reduce)` que o desliga
-por inteiro. **Entrada com fade em toda seção e hover em todo card é o padrão que
-denuncia trabalho de IA** — evitar.
-
-**Outras convenções do Planner v2 a manter:**
-- Ícones: `@phosphor-icons/react`, uma família só, tamanho explícito.
-- Nunca `<input type="date">` puro — ele desenha a data na região do navegador, não
-  no idioma da página. Usar um componente próprio (`CampoData` no Planner v2) que
-  mostra DD/MM/AAAA em texto e abre o calendário do sistema via `showPicker()` num
-  input escondido com `opacity: 0` (não `display: none`).
-- `<select>` sempre customizado (seta própria sobre o nativo), fundo opaco.
-- Grau/enum gravado sem acento no banco (ex.: `Otimo`), acento só na exibição.
 
 ---
 
@@ -319,10 +131,16 @@ nada disso agora, só ter o contexto pronto):
 
 ## Comandos de referência rápida
 
-Tudo detalhado no `README.md`. Os mais usados:
+Tudo detalhado no `README.md` (backend) e `frontend/README.md`. Os mais usados:
 
 ```bash
 docker compose up                          # sobe api + db
+docker compose up -d --build api           # reconstrói a imagem da API depois de mudar app/
 python -m pytest tests -k domain           # testes puros, sem banco
 python -m pytest tests/                    # suíte completa, precisa de `docker compose up -d db`
+
+cd frontend
+npm install && npm run dev                 # UI em http://localhost:5173
+npm test                                   # 24 testes (Vitest)
+npm run build                              # inclui checagem de tipos (tsc -b)
 ```
