@@ -140,24 +140,3 @@ gh pr create --fill
 # depois que o CI passar:
 gh pr merge --squash --delete-branch
 ```
-
-## O que foi deixado de fora de propósito
-
-- **Alembic/migrações.** Schema ainda simples e sem dado em produção — o app
-  cria as tabelas sozinho no startup. Trocar por migrações no dia em que o
-  schema precisar evoluir sem poder recriar o banco do zero.
-- **Conteúdo institucional de progressão** (textos de expectativa por marco de
-  tempo de casa). É propriedade do empregador de quem usa isto, não deste
-  projeto — ver `criterios.local.json` acima.
-- **Multiusuário/roles.** Ver seção de privacidade.
-- **Router no frontend.** As telas são abas trocadas por estado local, não
-  URLs — não há navegação profunda que justifique um roteador aqui.
-- **RAG e agente com ferramentas.** Existiram neste repositório e foram
-  removidos de propósito, pra virar aprendizado num projeto novo e separado
-  sobre uma base pública — ver `RETOMAR.md` para o contexto completo.
-
----
-
-Documentação mais detalhada: [`PROJETO.md`](PROJETO.md) (histórico e decisões),
-[`RETOMAR.md`](RETOMAR.md) (o que vem a seguir), [`frontend/README.md`](frontend/README.md)
-(estrutura do frontend).
