@@ -56,6 +56,24 @@ function configurarMock() {
       return Promise.resolve({ id: 999, criado_em: '2025-01-02T00:00:00Z', ...corpo })
     }
 
+    // "Preparar 1:1" monta <Pauta>, que também usa o mesmo apiFetch mockado
+    // aqui — sem este caso a chamada cai no fallback `[]` e a Pauta quebra
+    // tentando ler `.marco_atual.titulo` de um array.
+    if (caminho === '/pessoas/1/pauta') {
+      return Promise.resolve({
+        pessoa: { id: 1, nome: 'Marina' },
+        tempo_de_casa: '1 ano',
+        marco_atual: { id: 'm1', titulo: 'Consolidação', secoes: [] },
+        proximo_marco: null,
+        desde: null,
+        novidades: [],
+        anteriores: [],
+        abertos: [],
+        evoluidos: [],
+        fortes: [],
+      })
+    }
+
     return Promise.resolve([])
   })
 }
@@ -113,6 +131,7 @@ describe('Equipe', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Preparar 1:1/ }))
 
-    expect(await screen.findByText(/Pauta de Marina/)).toBeVisible()
+    expect(await screen.findByText('Pauta do 1:1')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Marina' })).toBeVisible()
   })
 })
